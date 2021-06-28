@@ -18,7 +18,7 @@ target_include_directories(OpenSGS PUBLIC
     ${OPENGL_INCLUDE_DIRS}
     ${SDL2_INCLUDE_DIRS}
     ${GLEW_INCLUDE_DIRS}
-    ${PROJECT_SOURCE_DIR}/nuklear/
+    ${PROJECT_SOURCE_DIR}/Nuklear/
     ${PROJECT_SOURCE_DIR}/osgs/
 )
 

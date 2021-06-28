@@ -220,7 +220,7 @@ int main(int, char **)
     ctx = nk_sdl_init(win);
     struct nk_font_atlas *atlas;
     nk_sdl_font_stash_begin(&atlas);
-    struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "./nuklear/extra_font/Roboto-Regular.ttf", 16, 0);
+    struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "./Nuklear/extra_font/Roboto-Regular.ttf", 16, 0);
     nk_sdl_font_stash_end();
     nk_style_set_font(ctx, &roboto->handle);
 
