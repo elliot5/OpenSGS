@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "math.h": "c",
+        "sdl_opengl.h": "c",
+        "assert.h": "c",
+        "limits.h": "c",
+        "string.h": "c"
+    }
+}

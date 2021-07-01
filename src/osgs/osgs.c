@@ -1,13 +1,15 @@
 #include "osgs_config.h"
 #include "osgs_logging.h"
+#include "osgs_audiogen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
-#include <math.h>
 #include <assert.h>
+
+#define __USE_MISC
 #include <math.h>
 #include <limits.h>
 #include <time.h>
@@ -35,76 +37,27 @@
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
-enum {SINE, SQUARE, TRIANGLE};
-static int op = SINE;
 
-float wave_frequency = 0.5f;
-float wave_amplitude = 0.5f;
-float wave_volume = 0.5f;
-
+waveprp_t wave_properties;
 int play = 0;
 
-double wave_phase = 0.0;
-double wave_phase_speed = 0.0;
+void osgs_audio_callback(void* userdata, Uint8* stream, int streamLength) {
+    #if SAMPLE_DEPTH == 8
+        Sint8* buffer = (Sint8*)stream; // Signed, 8-Bit
+        Sint8 samples = streamLength / sizeof(Sint8);
+    #elif SAMPLE_DEPTH == 16
+        Sint16* buffer = (Sint16*)stream; // Signed, 16-Bit, Least Significant Bit
+        Sint16 samples = streamLength / sizeof(Sint16);
+    #elif SAMPLE_DEPTH == 32
+        Sint32* buffer = (Sint32*)stream; // Signed, 32-Bit, Least Significant Bit
+        Sint32 samples = streamLength / sizeof(Sint32);
+    #endif
 
-#define uint8_max 255
-#define uint8_half 128
-
-double get_sine_wave_signed()
-{
-    const double TAO = 2.0 * M_PI;
-    return sin(wave_phase * (TAO / 44100.0));
-}
-
-uint8_t get_sine_wave()
-{
-    return uint8_max * (get_sine_wave_signed() + 1.0f) / 2.0f;
-}
-
-uint8_t get_square_wave()
-{
-    if(get_sine_wave() > uint8_half)
-    {
-        return uint8_max;
-    } else {
-        return 0;
-    }
-}
-
-uint8_t get_triangle_wave()
-{
-    // to be implemented
-    return 0;
-}
-
-uint8_t get_wave()
-{
-    const double MAX_PHASE_SPEED = 2048.0;
-    uint8_t base_wave = 0.0;
-    switch (op) {
-        case SINE:
-            base_wave = get_sine_wave();
-            break;
-        case SQUARE:
-            base_wave = get_square_wave();
-            break;
-        case TRIANGLE:
-            base_wave = get_triangle_wave();
-            break;
-    }
-    wave_phase_speed = (wave_frequency * MAX_PHASE_SPEED); // 0 - 1000 phase speed calculation
-    wave_phase += wave_phase_speed; // increase phase
-    uint8_t final_wave = base_wave * wave_volume; // scale via volume (0.0 - 1.0)
-    return final_wave;
-}
-
-void osgs_audio_callback(void* userdata, Uint8* stream, int len) {
-    uint8_t *buffer = (uint8_t*)stream;
-    for(int i = 0; i < len; i++) {
+    for(SAMPLE_EXT_T ind = 0; ind < samples; ind++) {
         if(play) {
-            buffer[i] = get_wave();
+            buffer[ind] = get_wave(wave_properties);
         } else {
-            buffer[i] = 0;
+            buffer[ind] = 0.0f;
         }
     }
 }
@@ -113,9 +66,15 @@ SDL_AudioSpec init_sdl_audio()
 {
     /* audio specification pre-setup */
     SDL_AudioSpec requested_spec, supplied_spec;
-    SDL_zero(requested_spec);
+    SDL_zero(requested_spec); //SDL_Memset 0
+    #if SAMPLE_DEPTH == 8
+        requested_spec.format = AUDIO_S8; // Signed, 8-Bit
+    #elif SAMPLE_DEPTH == 16
+        requested_spec.format = AUDIO_S16LSB; // Signed, 16-Bit, Least Significant Bit
+    #elif SAMPLE_DEPTH == 32
+        requested_spec.format = AUDIO_S32LSB; // Signed, 32-Bit, Least Significant Bit
+    #endif
     requested_spec.freq = 44100;
-    requested_spec.format = AUDIO_U8;
     requested_spec.channels = 1;
     requested_spec.samples = 2048;
     requested_spec.callback = osgs_audio_callback;
@@ -179,7 +138,7 @@ SDL_AudioSpec init_sdl_audio()
     return supplied_spec;
 }
 
-int main(int, char **)
+int main(int charc, char* argv[])
 {
     /* platform */
     SDL_Window *win;
@@ -257,14 +216,14 @@ int main(int, char **)
                 }
             }
             nk_label(ctx, "Frequency:", NK_TEXT_LEFT);
-            nk_slider_float(ctx, 0, &wave_frequency, 1.0f, 0.01f);
-            nk_label(ctx, "Volume: ", NK_TEXT_LEFT);
-            nk_slider_float(ctx, 0, &wave_volume, 1.0f, 0.01f);   
+            nk_slider_float(ctx, 0, &wave_properties.wave_frequency, 1.0f, 0.01f);
+            nk_label(ctx, "Amplitude: ", NK_TEXT_LEFT);
+            nk_slider_float(ctx, 0, &wave_properties.wave_amplitude, 2.0f, 0.01f);   
 
             nk_layout_row_dynamic(ctx, 30, 2);
-            if (nk_option_label(ctx, "Sine", op == SINE)) { op = SINE; }
-            if (nk_option_label(ctx, "Square", op == SQUARE)) { op = SQUARE; }
-            if (nk_option_label(ctx, "Triangle", op == TRIANGLE)) { op = TRIANGLE; }
+            if (nk_option_label(ctx, "Sine", wave_properties.wave_mode == SINE)) { wave_properties.wave_mode = SINE; }
+            if (nk_option_label(ctx, "Square", wave_properties.wave_mode == SQUARE)) { wave_properties.wave_mode = SQUARE; }
+            if (nk_option_label(ctx, "Triangle", wave_properties.wave_mode == TRIANGLE)) { wave_properties.wave_mode = TRIANGLE; }
             nk_layout_row_dynamic(ctx, 22, 1);
 
         }

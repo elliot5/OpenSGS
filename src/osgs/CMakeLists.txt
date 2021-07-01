@@ -1,6 +1,6 @@
 
 # add the executable
-add_executable(OpenSGS osgs.c)
+add_executable(OpenSGS osgs.c osgs_audiogen.c)
 
 configure_file(osgs_config.h.in osgs_config.h)
 
