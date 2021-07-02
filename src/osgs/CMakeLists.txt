@@ -13,6 +13,9 @@ PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
 PKG_SEARCH_MODULE(OpenGL REQUIRED opengl)
 PKG_SEARCH_MODULE(GLEW REQUIRED glew)
 
+# compile options
+target_compile_options(OpenSGS PRIVATE -ansi -Wall -pedantic-errors)
+
 # includes on target
 target_include_directories(OpenSGS PUBLIC
     ${OPENGL_INCLUDE_DIRS}

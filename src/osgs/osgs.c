@@ -43,36 +43,43 @@ int play = 0;
 
 void osgs_audio_callback(void* userdata, Uint8* stream, int streamLength) {
     #if SAMPLE_DEPTH == 8
-        Sint8* buffer = (Sint8*)stream; // Signed, 8-Bit
+        Sint8* buffer = (Sint8*)stream; /* Signed, 8-Bit */
         Sint8 samples = streamLength / sizeof(Sint8);
     #elif SAMPLE_DEPTH == 16
-        Sint16* buffer = (Sint16*)stream; // Signed, 16-Bit, Least Significant Bit
+        Sint16* buffer = (Sint16*)stream; /* Signed, 16-Bit, Least Significant Bit */
         Sint16 samples = streamLength / sizeof(Sint16);
     #elif SAMPLE_DEPTH == 32
-        Sint32* buffer = (Sint32*)stream; // Signed, 32-Bit, Least Significant Bit
+        Sint32* buffer = (Sint32*)stream; /* Signed, 32-Bit, Least Significant Bit */
         Sint32 samples = streamLength / sizeof(Sint32);
     #endif
 
-    for(SAMPLE_EXT_T ind = 0; ind < samples; ind++) {
+    SAMPLE_EXT_T i;
+    for(i = 0; i < samples; i++) {
         if(play) {
-            buffer[ind] = get_wave(wave_properties);
+            buffer[i] = get_wave(wave_properties);
         } else {
-            buffer[ind] = 0.0f;
+            buffer[i] = 0.0f;
         }
     }
 }
 
 SDL_AudioSpec init_sdl_audio()
 {
+    SDL_AudioDeviceID   default_audio_device = 0;
+    int                 sdlaudio_driver_cnt = 0;
+    int                 sdlaudio_device_cnt = 0;
+    int                 sdlaudio_mode = 0; /* 0 = playback */
+    int                 i = 0;
+
     /* audio specification pre-setup */
     SDL_AudioSpec requested_spec, supplied_spec;
-    SDL_zero(requested_spec); //SDL_Memset 0
+    SDL_zero(requested_spec); /* SDL_Memset 0 */
     #if SAMPLE_DEPTH == 8
-        requested_spec.format = AUDIO_S8; // Signed, 8-Bit
+        requested_spec.format = AUDIO_S8; /* Signed, 8-Bit */
     #elif SAMPLE_DEPTH == 16
-        requested_spec.format = AUDIO_S16LSB; // Signed, 16-Bit, Least Significant Bit
+        requested_spec.format = AUDIO_S16LSB; /* Signed, 16-Bit, Least Significant Bit */
     #elif SAMPLE_DEPTH == 32
-        requested_spec.format = AUDIO_S32LSB; // Signed, 32-Bit, Least Significant Bit
+        requested_spec.format = AUDIO_S32LSB; /* Signed, 32-Bit, Least Significant Bit */
     #endif
     requested_spec.freq = 44100;
     requested_spec.channels = 1;
@@ -80,56 +87,55 @@ SDL_AudioSpec init_sdl_audio()
     requested_spec.callback = osgs_audio_callback;
 
     /* determine audio drivers */
-    int sdlaudio_driver_cnt = SDL_GetNumAudioDrivers();
-    OSGS_LOGINFO("[sdl] detected %d sdl audio drivers", sdlaudio_driver_cnt);
-    int i = 0;
+    sdlaudio_driver_cnt = SDL_GetNumAudioDrivers();
+    OSGS_LOGINFO(("[sdl] detected %d sdl audio drivers", sdlaudio_driver_cnt));
+
     for(i = 0; i < sdlaudio_driver_cnt; i++)
     {
         const char* sdlaudio_driver = SDL_GetAudioDriver(i);
         if(!SDL_AudioInit(sdlaudio_driver))
         {
-            OSGS_LOGINFO("  > success \'%s\'", sdlaudio_driver);
+            OSGS_LOGINFO(("  > success \'%s\'", sdlaudio_driver));
             break;
         } else {
-            OSGS_LOGINFO("  > skipping \'%s\'", sdlaudio_driver);
+            OSGS_LOGINFO(("  > skipping \'%s\'", sdlaudio_driver));
             continue;
         }
     }
     if(i == sdlaudio_driver_cnt)
     {
-        OSGS_LOGERROR("failed on setup of sdlaudio: %s", SDL_GetError());
+        OSGS_LOGERROR(("failed on setup of sdlaudio: %s", SDL_GetError()));
         SDL_Quit();
         return requested_spec;
     }
-    OSGS_LOGINFO("[sdl] chosen audio driver: %s", SDL_GetCurrentAudioDriver());
+    OSGS_LOGINFO(("[sdl] chosen audio driver: %s", SDL_GetCurrentAudioDriver()));
 
     /* determine audio devices */
-    int sdlaudio_mode = 0; // 0 = playback
-    int sdlaudio_device_cnt = SDL_GetNumAudioDevices(sdlaudio_mode);
-    OSGS_LOGINFO("[sdl] detected %d sdl audio devices", sdlaudio_device_cnt);
-    for(int i = 0; i < sdlaudio_device_cnt; i++)
+    sdlaudio_device_cnt = SDL_GetNumAudioDevices(sdlaudio_mode);
+    OSGS_LOGINFO(("[sdl] detected %d sdl audio devices", sdlaudio_device_cnt));
+    for(i = 0; i < sdlaudio_device_cnt; i++)
     {
         const char* sdlaudio_device = SDL_GetAudioDeviceName(i, sdlaudio_mode);
-        OSGS_LOGINFO("  > detected \'%s\'", sdlaudio_device);
+        OSGS_LOGINFO(("  > detected \'%s\'", sdlaudio_device));
     }
 
     /* output */
-    OSGS_LOGINFO("[sdl] requested - frequency: %d format: f %d s %d be %d sz %d channels: %d samples: %d",\
+    OSGS_LOGINFO(("[sdl] requested - frequency: %d format: f %d s %d be %d sz %d channels: %d samples: %d",\
     requested_spec.freq, SDL_AUDIO_ISFLOAT(requested_spec.format), SDL_AUDIO_ISSIGNED(requested_spec.format),\
-    SDL_AUDIO_ISBIGENDIAN(requested_spec.format), SDL_AUDIO_BITSIZE(requested_spec.format), requested_spec.channels, requested_spec.samples);
+    SDL_AUDIO_ISBIGENDIAN(requested_spec.format), SDL_AUDIO_BITSIZE(requested_spec.format), requested_spec.channels, requested_spec.samples));
 
     /* open audio device, allowing changes to the specification, NULL = default device */
-    SDL_AudioDeviceID default_audio_device = SDL_OpenAudioDevice(NULL, 0, &requested_spec, &supplied_spec, SDL_AUDIO_ALLOW_ANY_CHANGE);
+    default_audio_device = SDL_OpenAudioDevice(NULL, 0, &requested_spec, &supplied_spec, SDL_AUDIO_ALLOW_ANY_CHANGE);
     if(!default_audio_device) {
-        OSGS_LOGERROR("[sdl] failed to open audio device: %s", SDL_GetError());
+        OSGS_LOGERROR(("[sdl] failed to open audio device: %s", SDL_GetError()));
         SDL_Quit();
         return supplied_spec;
     }
 
     /* output supplied specification */
-    OSGS_LOGINFO("[sdl] supplied - frequency: %d format: f %d s %d be %d sz %d channels: %d samples: %d",\
+    OSGS_LOGINFO(("[sdl] supplied - frequency: %d format: f %d s %d be %d sz %d channels: %d samples: %d",\
     supplied_spec.freq, SDL_AUDIO_ISFLOAT(supplied_spec.format), SDL_AUDIO_ISSIGNED(supplied_spec.format),\
-    SDL_AUDIO_ISBIGENDIAN(supplied_spec.format), SDL_AUDIO_BITSIZE(supplied_spec.format), supplied_spec.channels, supplied_spec.samples);
+    SDL_AUDIO_ISBIGENDIAN(supplied_spec.format), SDL_AUDIO_BITSIZE(supplied_spec.format), supplied_spec.channels, supplied_spec.samples));
 
     /* unpause audio device  */
     SDL_PauseAudioDevice(default_audio_device, 0);
@@ -148,11 +154,15 @@ int main(int charc, char* argv[])
 
     /* gui */
     struct nk_context *ctx;
-    struct nk_colorf bg;
+    struct nk_font_atlas *atlas;
+    struct nk_font *roboto;
+
+    /* spec */
+    SDL_AudioSpec supplied_spec;
 
     /* sdl hints */
-    SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0"); // ensure compositor is enabled
-    SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0"); // ensure high-dpi compatability
+    SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0"); /* ensure compositor is enabled */
+    SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0"); /* ensure high-dpi compatability */
 
     /* init */
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS|SDL_INIT_AUDIO);
@@ -175,16 +185,20 @@ int main(int charc, char* argv[])
         exit(1);
     }
 
-    // sdl init
+    /* sdl init */
     ctx = nk_sdl_init(win);
-    struct nk_font_atlas *atlas;
     nk_sdl_font_stash_begin(&atlas);
-    struct nk_font *roboto = nk_font_atlas_add_from_file(atlas, "./Nuklear/extra_font/Roboto-Regular.ttf", 16, 0);
+    roboto = nk_font_atlas_add_from_file(atlas, "./Nuklear/extra_font/Roboto-Regular.ttf", 16, 0);
     nk_sdl_font_stash_end();
     nk_style_set_font(ctx, &roboto->handle);
 
-    // sdl audio
-    SDL_AudioSpec supplied_spec = init_sdl_audio();
+    /* sdl audio */
+    supplied_spec = init_sdl_audio();
+    if(supplied_spec.callback == NULL)
+    {
+        OSGS_LOGERROR(("NULL Callback not allowed, exiting"));
+        exit(1);
+    }
 
     while (running)
     {
@@ -201,8 +215,8 @@ int main(int charc, char* argv[])
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
             NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {
-            nk_layout_row_static(ctx, 30, 300, 1);
             char* playbtn_label = "Play";
+            nk_layout_row_static(ctx, 30, 300, 1);
             if(play)
             {
                 playbtn_label = "Pause";
