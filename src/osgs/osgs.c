@@ -31,15 +31,16 @@
 #include <nuklear.h>
 #include "nuklear_sdl_gl3.h"
 
-#define WINDOW_WIDTH 600
-#define WINDOW_HEIGHT 400
+#include "osgs_render.c"
+
+#define WINDOW_WIDTH 600 * 2
+#define WINDOW_HEIGHT 400 * 2
 
 #define MAX_VERTEX_MEMORY 512 * 1024
 #define MAX_ELEMENT_MEMORY 128 * 1024
 
 
 waveprp_t wave_properties;
-int play = 0;
 
 void osgs_audio_callback(void* userdata, Uint8* stream, int streamLength) {
     #if SAMPLE_DEPTH == 8
@@ -52,10 +53,10 @@ void osgs_audio_callback(void* userdata, Uint8* stream, int streamLength) {
         Sint32* buffer = (Sint32*)stream; /* Signed, 32-Bit, Least Significant Bit */
         Sint32 samples = streamLength / sizeof(Sint32);
     #endif
-
+    
     SAMPLE_EXT_T i;
     for(i = 0; i < samples; i++) {
-        if(play) {
+        if(wave_properties.playing) {
             buffer[i] = get_wave(wave_properties);
         } else {
             buffer[i] = 0.0f;
@@ -115,7 +116,7 @@ SDL_AudioSpec init_sdl_audio()
     OSGS_LOGINFO(("[sdl] detected %d sdl audio devices", sdlaudio_device_cnt));
     for(i = 0; i < sdlaudio_device_cnt; i++)
     {
-        const char* sdlaudio_device = SDL_GetAudioDeviceName(i, sdlaudio_mode);
+        const char *sdlaudio_device = SDL_GetAudioDeviceName(i, sdlaudio_mode);
         OSGS_LOGINFO(("  > detected \'%s\'", sdlaudio_device));
     }
 
@@ -139,7 +140,9 @@ SDL_AudioSpec init_sdl_audio()
 
     /* unpause audio device  */
     SDL_PauseAudioDevice(default_audio_device, 0);
-    play = 1;
+    wave_properties.playing = 1;
+    wave_properties.wave_amplitude = 0.2;
+    wave_properties.wave_frequency = 0.5f;
 
     return supplied_spec;
 }
@@ -155,7 +158,7 @@ int main(int charc, char* argv[])
     /* gui */
     struct nk_context *ctx;
     struct nk_font_atlas *atlas;
-    struct nk_font *roboto;
+    /* struct nk_font *roboto; */
 
     /* spec */
     SDL_AudioSpec supplied_spec;
@@ -188,9 +191,9 @@ int main(int charc, char* argv[])
     /* sdl init */
     ctx = nk_sdl_init(win);
     nk_sdl_font_stash_begin(&atlas);
-    roboto = nk_font_atlas_add_from_file(atlas, "./Nuklear/extra_font/Roboto-Regular.ttf", 16, 0);
+    /* roboto = nk_font_atlas_add_from_file(atlas, "./Nuklear/extra_font/Roboto-Regular.ttf", 16, 0); */
     nk_sdl_font_stash_end();
-    nk_style_set_font(ctx, &roboto->handle);
+    /* nk_style_set_font(ctx, &roboto->handle); */
 
     /* sdl audio */
     supplied_spec = init_sdl_audio();
@@ -211,37 +214,16 @@ int main(int charc, char* argv[])
         } nk_input_end(ctx);
 
         /* GUI */
-        if (nk_begin(ctx, "OpenSGS Wave Generator", nk_rect(140, 50, 345, 285),
+        /* if (nk_begin(ctx, "OpenSGS Wave Generator", nk_rect(140, 50, 345, 285),
             NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
             NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
         {
-            char* playbtn_label = "Play";
-            nk_layout_row_static(ctx, 30, 300, 1);
-            if(play)
-            {
-                playbtn_label = "Pause";
-            }
-            if (nk_button_label(ctx, playbtn_label)) {
-                if(play)
-                {
-                    play = 0;
-                } else {
-                    play = 1;
-                }
-            }
-            nk_label(ctx, "Frequency:", NK_TEXT_LEFT);
-            nk_slider_float(ctx, 0, &wave_properties.wave_frequency, 1.0f, 0.01f);
-            nk_label(ctx, "Amplitude: ", NK_TEXT_LEFT);
-            nk_slider_float(ctx, 0, &wave_properties.wave_amplitude, 2.0f, 0.01f);   
 
-            nk_layout_row_dynamic(ctx, 30, 2);
-            if (nk_option_label(ctx, "Sine", wave_properties.wave_mode == SINE)) { wave_properties.wave_mode = SINE; }
-            if (nk_option_label(ctx, "Square", wave_properties.wave_mode == SQUARE)) { wave_properties.wave_mode = SQUARE; }
-            if (nk_option_label(ctx, "Triangle", wave_properties.wave_mode == TRIANGLE)) { wave_properties.wave_mode = TRIANGLE; }
-            nk_layout_row_dynamic(ctx, 22, 1);
 
-        }
-        nk_end(ctx);
+        } */
+        /* k_end(ctx); */
+
+        node_editor(ctx, &wave_properties);
 
         /* draw */
         SDL_GetWindowSize(win, &win_width, &win_height);

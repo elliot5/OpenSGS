@@ -42,6 +42,7 @@ typedef struct waveprp_s {
     wave_t wave_mode;
     float wave_frequency;
     float wave_amplitude;
+    int playing;
 } waveprp_t;
 
 float get_sine_wave_signed();
@@ -56,4 +57,4 @@ SAMPLE_T get_wave(waveprp_t wave_properties);
 
 SAMPLE_EXT_T get_sample_amplitude(float wave_amplitude);
 
-SAMPLE_T declip_wave(SAMPLE_EXT_T wave, int* clip_result);
+SAMPLE_T declip_wave(SAMPLE_EXT_T wave, int *clip_result);
